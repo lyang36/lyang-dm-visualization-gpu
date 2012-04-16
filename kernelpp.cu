@@ -158,14 +158,15 @@ cudaError_t run_kernel(const long MAX_Num_Paritcle, const long Nside,
 			double ff = maplist[i].signal/norm;
 			allskymap[maplist[i].pix] += ff;
 		}
-		else{
-			int k = maplist[i].pix;
-		}
+		//else{
+			//int k = maplist[i].pix;
+		//}
 	}
 	//std::cout << " maplist: " << init << std::endl;
 	free(maplist);
 	cudaFree(dev_maplist);
 	//std::cout << (clock() -starttime) / 1000.0 << " sec -> kernel end" << std::endl;
+	return cudaSuccess;
 }
 
 
@@ -463,18 +464,18 @@ void in_ring_count(long nside_, int iz, Real phi0, Real dphi,
 	int ipix2 = ipix1 + nr - 1;       //    highest pixel number in the ring
 
 	// ----------- constructs the pixel list --------------
-	if (dphi > (PI-1e-7))
+	if (dphi > (PI - 1e-7))
 		for (int i=ipix1; i<=ipix2; ++i){
 			num++;		
-			/*if( ++pos < maxnum){
+			/*if( ++ pos < maxnum){
 				listir[(pos)] = i;
 			}*/
 			norm += calc_weight(nside_, i, vecx, vecy, vecz, 1.0, angular_radius);
 	}
 	else
 	{
-		int ip_lo = floor(nr*inv_twopi*(phi0-dphi) - shift)+1;
-		int ip_hi = floor(nr*inv_twopi*(phi0+dphi) - shift);
+		int ip_lo = (int) floor(nr*inv_twopi*(phi0-dphi) - shift)+1;
+		int ip_hi = (int) floor(nr*inv_twopi*(phi0+dphi) - shift);
 		int pixnum = ip_lo+ipix1;
 		if (pixnum<ipix1) pixnum += nr;
 		for (int i=ip_lo; i<=ip_hi; ++i, ++pixnum)
@@ -758,16 +759,16 @@ void generate_map_step1(const long Nside,
 	}
 	MapParticle mp = particles[i];
 	Real density = mp.density;
-	Real hsmooth = mp.hsmooth;
-	Real fluxes = mp.mass;
+	//Real hsmooth = mp.hsmooth;
+	//Real fluxes = mp.mass;
 	Real phi = mp.zpos;
 	Real theta = mp.ypos;
 	Real angular_radius = mp.hsmooth;
 
 #ifdef POS_FLOAT
-	float3 _opos = {opos[0], opos[1], opos[2]};
+	//float3 _opos = {opos[0], opos[1], opos[2]};
 #else
-	double3 _opos = {opos[0], opos[1], opos[2]};
+	//double3 _opos = {opos[0], opos[1], opos[2]};
 #endif
 
 	if( density >= 0.0){
@@ -854,3 +855,4 @@ void generate_map_step2(const long Nside,
 		}
 	}
 }
+

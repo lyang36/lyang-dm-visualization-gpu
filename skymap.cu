@@ -24,8 +24,8 @@
 #include <thrust/copy.h>
 
 
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
+//#include "cuda_runtime.h"
+//#include "device_launch_parameters.h"
 #include <cuda.h>
 #include <cstdio>
 //#include <b40c/radix_sort/enactor.cuh>
@@ -52,7 +52,7 @@ bool Skymap::creat_map(){
 	else rotate = *_rotate;
 
 	//allocate memory for map
-	const int LP = 10000;
+	//const int LP = 10000;
 	int Nparts = 0;
 
 	//get rotation matrix
@@ -79,7 +79,7 @@ bool Skymap::creat_map(){
     ifstream data_input_file((*datafile).c_str(), ios::binary);
 	if(data_input_file.bad()){
 		cout << "Data Error!!!" << endl;
-		exit(0);
+		return false;
 	}
     data_input_file.read((char*)&Nparts, sizeof(Nparts));  
 	cout << "Particles: " << Nparts << endl;
@@ -102,9 +102,9 @@ bool Skymap::creat_map(){
 	Real * dev_opos = 0; //(should be constant)/
 	double fluxfactor = master->codeunits.annihilation_flux_to_cgs;
 	MapParticle * dev_par = 0;
-	int * host_keys;
-	int * dev_keys;
-	int * dev_values;
+	//int * host_keys;
+	//int * dev_keys;
+	//int * dev_values;
 
 
 	cudaError_t cudaStatus = cudaSetDevice(0);
@@ -161,7 +161,7 @@ bool Skymap::creat_map(){
 
 	cout << "Creating map!!!" << endl;
 	//cout << "---10---20---30---40---50---60---70---80---90--100%\n";
-	int rec = Nparts / MAX_Num_Particle / 50;
+	//int rec = Nparts / MAX_Num_Particle / 50;
 	clock_t time;
 	time = clock(); 
 	
@@ -352,10 +352,16 @@ bool Skymap::creat_map(){
 	free(allskymap);
 	data_input_file.close();
 	//free(newskymap);
-    cudaFree(dev_rotm);
-    cudaFree(dev_opos);
+   	cudaFree(dev_rotm);
+    	cudaFree(dev_opos);
 	cudaFree(dev_par);
 	//cudaFree(dev_allskymap);
+	
+	cudaStatus = cudaDeviceReset();
+	if (cudaStatus != cudaSuccess){
+		fprintf(stderr, "cudaDeviceReset failed!");
+                return false;
+	}
 	return true;
 
 }

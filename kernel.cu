@@ -775,3 +775,5 @@ void generate_map(const long Nside,
 					
 
 					}  // loop over pixels covered by this particle*/
+
+
