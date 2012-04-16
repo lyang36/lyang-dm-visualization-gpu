@@ -5,6 +5,8 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
+//#include <thrust/host_vector.h>
+
 #define MAX_PIX_PER_PAR 200 //might be incorrect
 //#define MAX_ANGULAR_RADIUS 0.001
 
@@ -31,6 +33,11 @@ cudaError_t doWithCuda_Par(const long MAX_Num_Paritcle, const long Nside,
 		 Real *allskymap, MapParticle * dev_par, MapParticle * host_par,
 		 Real * dev_rotm, Real * dev_opos);
 
+cudaError_t doWithCuda_pre(const long MAX_Num_Paritcle, const long Nside, 
+		 const Real theta0, const Real fluxfactor, const long nmax,
+		 Real *allskymap, MapParticle * dev_par, MapParticle * host_par,
+		 Real * dev_rotm, Real * dev_opos, int * pd_key, int * pd_val, int stpoint);
+
 /*__global__
 void generate_map(const long Nside, 
 		 const Real theta0, const Real fluxfactor, const long nmax,
@@ -38,4 +45,3 @@ void generate_map(const long Nside,
 		 Real * rotmatrix, Real * opos);*/
 
 #endif
-

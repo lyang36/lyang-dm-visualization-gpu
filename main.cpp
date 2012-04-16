@@ -94,7 +94,7 @@ int main(int argc, const char **argv){
 	skymap->datafile = &datafile;
 	skymap->map = &(master.map);
 	bool rotate = true;
-	//skymap->_rotate = &rotate; 
+	skymap->_rotate = &rotate; 
 	skymap->creat_map();
 	getchar();
 /*----------------------------------------------------*/

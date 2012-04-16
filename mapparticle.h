@@ -1,4 +1,6 @@
 #include "structures.h"
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
 
 #ifndef __MAP_PARTICLE_STRUCTURE__
 #define __MAP_PARTICLE_STRUCTURE__
@@ -14,7 +16,7 @@ public:
 /*	bool operator()(const MapParticle &a, const MapParticle &b) const{
 		return a.zpos > b.zpos;
 	}*/
-	bool operator>(const MapParticle &b) const{
+	__device__ __host__ bool operator>(const MapParticle &b) const{
 		return hsmooth > b.hsmooth;//hsmooth > b.hsmooth
 			/*(xpos-0.36116062)*(xpos-0.36116062) + 
 				(ypos-0.21047031)*(ypos-0.21047031) + 
@@ -27,4 +29,3 @@ public:
 
 
 #endif
-

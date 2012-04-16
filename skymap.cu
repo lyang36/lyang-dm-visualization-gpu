@@ -17,11 +17,21 @@
 #include "skymap.h"
 #include <ctime>
 #include "kernel.h"
-#include <algorithm>
+
+#include <thrust/host_vector.h>
+#include <thrust/device_vector.h>
 #include <thrust/sort.h>
+#include <thrust/copy.h>
+
 
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
+#include <cuda.h>
+#include <cstdio>
+//#include <b40c/radix_sort/enactor.cuh>
+//#include <b40c/util/multiple_buffering.cuh>
+
+//#include 
 
 
 using namespace std;;
@@ -71,12 +81,12 @@ bool Skymap::creat_map(){
 		cout << "Data Error!!!" << endl;
 		exit(0);
 	}
-	//cout << "File name: " << datafile->c_str() << endl;
     data_input_file.read((char*)&Nparts, sizeof(Nparts));  
 	cout << "Particles: " << Nparts << endl;
 	Np = Nparts;
 	num_p = 0;
-	particles = new MapParticle[MAX_Num_Particle];
+	particles = new MapParticle[CPU_trunk];
+	MapParticle * sorted_particles = new MapParticle[CPU_trunk];
 	Real * opos = master->params.opos;
 //	Real fluxes;//  = master.codeunits.annihilation_flux_to_cgs * density * mass / (4.0 * !pi * distances^2)
 	long Nside = master->map.Nside;
@@ -92,69 +102,62 @@ bool Skymap::creat_map(){
 	Real * dev_opos = 0; //(should be constant)/
 	double fluxfactor = master->codeunits.annihilation_flux_to_cgs;
 	MapParticle * dev_par = 0;
-	//mapMap * host_maplist;
-	//mapMap * dev_maplist;
+	int * host_keys;
+	int * dev_keys;
+	int * dev_values;
+
 
 	cudaError_t cudaStatus = cudaSetDevice(0);
 	if (cudaStatus != cudaSuccess) {
         fprintf(stderr, "cudaSetDevice failed!  Do you have a CUDA-capable GPU installed?");
-        exit(1);
+        return false;
     }
-
-	//host_maplist = (mapMap *)calloc(MAX_PIX_PER_PAR * MAX_Num_Particle,sizeof(mapMap));
-	//cudaStatus = cudaMalloc((void**)&dev_maplist, sizeof(mapMap) * MAX_PIX_PER_PAR * MAX_Num_Particle);
-    //if (cudaStatus != cudaSuccess) {
-    //    fprintf(stderr, "cudaMalloc failed!");
-	//	exit(0);
-    //}
-
-
-	//initiate the allskymap in GPU
-/*	cudaStatus = cudaMalloc((void**)&dev_allskymap, sizeof(Real) * Npix_map);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMalloc failed!");
-		exit(0);
-    }
-	cudaStatus = cudaMemcpy(dev_allskymap, allskymap,  sizeof(Real) * Npix_map, cudaMemcpyHostToDevice);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMemcpy failed!");
-        exit(0);
-    }*/
 
 	//copy rotmatrix into GPU
 	cudaStatus = cudaMalloc((void**)&dev_rotm, sizeof(Real) * 9);
     if (cudaStatus != cudaSuccess) {
         fprintf(stderr, "cudaMalloc failed!");
-		exit(0);
+		return false;
     }
 	cudaStatus = cudaMemcpy(dev_rotm, rotmatrix, sizeof(Real) * 9, cudaMemcpyHostToDevice);
     if (cudaStatus != cudaSuccess) {
         fprintf(stderr, "cudaMemcpy failed!");
-        exit(0);
+        return false;
     }
 
 	//copy o_pos into GPU
 	cudaStatus = cudaMalloc((void**)&dev_opos, sizeof(Real) * 3);
     if (cudaStatus != cudaSuccess) {
         fprintf(stderr, "cudaMalloc failed!");
-		exit(0);
+		return false;
     }
 	cudaStatus = cudaMemcpy(dev_opos, opos, sizeof(Real) * 3, cudaMemcpyHostToDevice);
     if (cudaStatus != cudaSuccess) {
         fprintf(stderr, "cudaMemcpy failed!");
-        exit(0);
+        return false;
     }
-	
+
 	//allocate particle memery into GPU
-	cudaStatus = cudaMalloc((void**)&dev_par, sizeof(MapParticle) * MAX_Num_Particle);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMalloc failed!");
-		exit(0);
-    }
+	int parsize = PRE_trunk > MAX_Num_Particle ? PRE_trunk : MAX_Num_Particle;
+	cudaStatus = cudaMalloc((void**)&dev_par, sizeof(MapParticle) * parsize);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc failed!");
+		return false;
+	}
+
 	//<debug
 	//int c = sizeof(MapParticle);
 	//int d = sizeof(MapParticle) * nmax;
 	//debug>
+	//thrust::host_vector<int> host_key(CPU_trunk);
+	//use for sorting
+	thrust::device_vector<int> dev_key(CPU_trunk);
+	thrust::device_vector<int> dev_val(CPU_trunk);
+	thrust::host_vector<int> host_val(CPU_trunk);
+	// obtain raw pointer to device vectors memory
+	int * pd_key = thrust::raw_pointer_cast(&dev_key[0]);
+	int * pd_val = thrust::raw_pointer_cast(&dev_val[0]);
+
 
 	cout << "Creating map!!!" << endl;
 	//cout << "---10---20---30---40---50---60---70---80---90--100%\n";
@@ -166,74 +169,115 @@ bool Skymap::creat_map(){
 	for(int _ip = 0, _jp=0 ; _ip < Nparts, _jp<1; _jp ++ ){
 		//if(_jp != 1017) continue;
 #else
-	for(int _ip = 0, _jp=0 ; _ip < Nparts; _jp ++ ){ /*use _jp < 100 to specify loops*///int _ip = 0; 
+	for(int _ip = 0, _jp=0 ; _ip < Nparts; _jp ++ ){ 
 #endif
-		cout << "block " << _jp << "--- Particles: " << MAX_Num_Particle + _ip << "/"<< Nparts << "..." << endl;
+		clock_t time_a = clock();
+		cout << "CPU_trunck " << _jp << "--- Particles: " << CPU_trunk + _ip << "/"<< Nparts << "..." << endl;
 		clock_t time_b = clock();
-		bool islast = false;
 		int nmax = 0;
-	
-		if( (Nparts - _ip) >= MAX_Num_Particle ){//read a block of data
-			data_input_file.read((char*)particles, sizeof(MapParticle) * MAX_Num_Particle); 	
-			_ip += MAX_Num_Particle;
-			nmax = MAX_Num_Particle;
-			//sort particles, so that the parallelism is more efficient
+		int tnmax = 0;
+
+		//read to CPU trunk
+		if( (Nparts - _ip) >= CPU_trunk ){//read a block of data
+			data_input_file.read((char*)particles, sizeof(MapParticle) * CPU_trunk); 	
+			_ip += CPU_trunk;
+			tnmax = CPU_trunk;
 		}else{
-			islast = true;
-			nmax = (Nparts - _ip);
-			data_input_file.read((char*)particles, sizeof(MapParticle) * nmax);
-			_ip += nmax;
-
+			tnmax = (Nparts - _ip);
+			data_input_file.read((char*)particles, sizeof(MapParticle) * tnmax);
+			_ip += tnmax;
 		}
-		//if(_jp != 168 ) continue;
-		//sort particles, so that the parallelism is more efficient
-		//cout << "sorting ... " << endl;
-		//sort(particles, particles + nmax, (&compare));
-		//thrust :: stable_sort (particles, particles + nmax, thrust::greater<MapParticle>());
-		//cout << "starting ..." << endl;
-
-		//copy particle data into GPU 
-		cudaStatus = cudaMemcpy(dev_par, particles, sizeof(MapParticle) * nmax, cudaMemcpyHostToDevice);
-		if (cudaStatus != cudaSuccess) {
-			fprintf(stderr, "cudaMemcpy failed!");
-			exit(0);
-		}
-		cudaStatus = doWithCuda_Par(MAX_Num_Particle,Nside,theta0,1,nmax,allskymap,
-			dev_par,particles,dev_rotm,dev_opos);
-		
-		//cudaStatus = doWithCuda(MAX_Num_Particle,Nside,theta0,1.0,nmax,
-		//	allskymap,dev_par,dev_rotm,dev_opos,dev_maplist,host_maplist);
-		if (cudaStatus != cudaSuccess) {
-			fprintf(stderr, "Kernel failed!");
-			return false;
-		}
-
-		//<debug
-/*		cudaStatus = cudaMemcpy(allskymap, dev_allskymap, 12 * Nside * Nside, cudaMemcpyDeviceToHost);
-		if (cudaStatus != cudaSuccess) {
-			fprintf(stderr, "cudaMemcpy failed!");
-			goto Err;
-		}
-		
-
-		Real sk[100];
-		Real a = allskymap[1000];
-		int j=0;
-		for(int i =0; i < 12*512*512 && j<100; i++){
-			if(allskymap[i] !=0 ){
-				sk[j] = allskymap[i];
-				j++;
+		//if(_jp < 6) continue;
+		//step 1: pre-deal with particles
+		//get the start point of pre-process data
+		for(int _pt =0; _pt < CPU_trunk; ){
+			if( (Nparts - _pt) >= PRE_trunk ){//read a block of data
+				nmax = PRE_trunk;
+			}else{
+				nmax = (CPU_trunk - _pt);
 			}
+
+			cudaStatus = cudaMemcpy(dev_par, particles + _pt, sizeof(MapParticle) * nmax, cudaMemcpyHostToDevice);
+			if (cudaStatus != cudaSuccess) {
+				fprintf(stderr, "cudaMemcpy failed!");
+				return false;
+			}
+			cudaStatus = doWithCuda_pre(PRE_trunk, Nside, theta0, 1, nmax, allskymap,
+			 dev_par, particles + _pt, dev_rotm, dev_opos, pd_key + _pt, pd_val + _pt, _pt);
+			if (cudaStatus != cudaSuccess) {
+				fprintf(stderr, "Kernel failed!");
+				return false;
+			}
+			_pt += nmax;
+		}
+		//cudaFree(dev_par);
+		std::cout <<"step1 cost: " << (clock() - time_b) / 1000.0 << " secs. "<< std::endl;
+
+		//step 2: sort
+		time_b = clock();
+		// interface to CUDA code
+		thrust::sort_by_key(dev_key.begin(), dev_key.end(), dev_val.begin());
+		thrust::copy(dev_val.begin(), dev_val.end(),host_val.begin());
+		for(int _pkk = CPU_trunk - 1; _pkk >=0; _pkk --){
+			int pg =host_val[_pkk];
+			sorted_particles[_pkk] = particles[pg];		
+		}
+		{//swape
+			MapParticle * temp;
+			temp = particles;
+			particles = sorted_particles;
+			sorted_particles = temp;
+		}
+/*		{//clear
+			dev_key.clear();
+			dev_val.clear();
+			host_val.clear();
+			cudaFree(pd_key);
+			cudaFree(pd_val);
+			free(ph_val);
+		}*/
+		std::cout <<"sort cost: " << (clock() - time_b) / 1000.0 << " secs. "<< std::endl;
+
+		//step3: calculate flux
+		time_b = clock();
+		/*cudaStatus = cudaMalloc((void**)&dev_par, sizeof(MapParticle) * MAX_Num_Particle);
+		if (cudaStatus != cudaSuccess) {
+			fprintf(stderr, "cudaMalloc failed!");
+			exit(0);
+		}*/
+
+		for(int _pt =0, _ptn = 0; _pt < CPU_trunk; _ptn++ ){
+			if( (Nparts - _pt) >= MAX_Num_Particle ){//read a block of data
+				nmax = MAX_Num_Particle;
+			}else{
+				nmax = (CPU_trunk - _pt);
+			}
+			//if(_pt < 2031616){ _pt += nmax; continue;}
+			cudaStatus = cudaMemcpy(dev_par, particles + _pt, sizeof(MapParticle) * nmax, cudaMemcpyHostToDevice);
+			if (cudaStatus != cudaSuccess) {
+				fprintf(stderr, "cudaMemcpy failed!");
+				return false;
+			}
+			//decide whether or not do step 1
+			//if > 5000 exceeds 
+			cudaStatus = doWithCuda_Par(MAX_Num_Particle, Nside, theta0, 1, nmax, allskymap,
+			dev_par, particles + _pt, dev_rotm, dev_opos);
+			if (cudaStatus != cudaSuccess) {
+				fprintf(stderr, "Kernel failed!");
+				return false;
+			}
+			_pt += nmax;
+		    if(_ptn % 10 ==0 ){
+				std::cout << ".";// << _pt << "/" << CPU_trunk << endl;
+				std::cout.flush();
 		
+			}
 		}
-		a = a;*/
-		//debug>
-		cout << "block " << _jp << ": "<< (float)_ip / Nparts *100<<"% finished, costs " << (Real)(clock() - time_b) / 1000.0 << 
-			" secs, escaped: " << (Real)(clock() - time) / 1000.0 << " secs" << endl;
-		if(_jp % rec == 0){
-			//cout << "#";
-			cout.flush();
-		}
+		std::cout << endl;
+		std::cout <<"step3 cost: " << (clock() - time_b) / 1000.0 << " secs. "<< std::endl;
+		std::cout << "trunk " << _jp << ": "<< (float)_ip / Nparts *100<<"% finished, costs " << (Real)(clock() - time_a) / 1000.0 << 
+			" secs, escaped: " << (Real)(clock() - time) / 1000.0 << " secs\n" << endl;
+		_jp =_jp;
 /*****************************************************************************************************************/
 	}
 
