@@ -6,16 +6,16 @@
 #include "structures.h"
 #include "setparams.h"
 #include "skymap.h"
-#include <cmath>
-#include "VL2_debug.h"
+
+
 
 using namespace std;
 
 int main(int argc, const char **argv){
 	int m=1;
 	string datafile = "/home/gpuclass4/data/data_new.bin";
-	string info_file =  "/home/gpuclass4/data/VL2_info.txt";
-	string fits_file = "/home/gpuclass4/gpuclass4/skymap.fits";
+        string info_file =  "/home/gpuclass4/data/VL2_info.txt";
+        string fits_file = "/home/gpuclass4/gpuclass4/skymap.fits";
 	long Nside = 512;
 	long Npix = 12 * Nside * Nside;
 	Real dOmega = 4.0 * M_PI / Npix;
@@ -88,7 +88,9 @@ int main(int argc, const char **argv){
 /*-----------------------------------------------------------------------------------------*/
 
 //*--------------generating fits map------------------*/
-	skymap->MAX_Num_Particle = 8 * 64 * 1024;//22369621/8; //~1Gb 1000000;//
+	skymap->MAX_Num_Particle = 16 * 1024;
+	skymap->CPU_trunk = 1024 / 48 * 1024 * 1024; //~1Gb 
+	skymap->PRE_trunk = skymap->CPU_trunk / 64; 
 	skymap->fits_filename = & fits_file;
 	skymap->master = &master;
 	skymap->datafile = &datafile;
@@ -100,6 +102,3 @@ int main(int argc, const char **argv){
 /*----------------------------------------------------*/
 	return 0;	
 }
-//this is for multigpu
-
-
