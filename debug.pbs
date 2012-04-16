@@ -1,0 +1,6 @@
+#PBS -N testSkymap
+#PBS -q debug
+#PBS -l walltime=60:00
+#PBS -l nodes=1
+cd $PBS_O_WORKDIR
+/home/gpuclass4/SkymapVL2_cuda/VL2_gpu
