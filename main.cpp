@@ -7,7 +7,7 @@
 #include "setparams.h"
 #include "skymap.h"
 #include <cmath>
-
+#include "VL2_debug.h"
 
 using namespace std;
 
@@ -100,3 +100,4 @@ int main(int argc, const char **argv){
 /*----------------------------------------------------*/
 	return 0;	
 }
+
