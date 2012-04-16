@@ -45,3 +45,4 @@ void generate_map(const long Nside,
 		 Real * rotmatrix, Real * opos);*/
 
 #endif
+
