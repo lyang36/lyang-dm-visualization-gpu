@@ -15,7 +15,7 @@ int main(int argc, const char **argv){
 	int m=1;
 	string datafile = "/home/gpuclass4/data/data_new.bin";
 	string info_file =  "/home/gpuclass4/data/VL2_info.txt";
-	string fits_file = "/home/lyang/gpuclass4/skymap.fits";
+	string fits_file = "/home/gpuclass4/gpuclass4/skymap.fits";
 	long Nside = 512;
 	long Npix = 12 * Nside * Nside;
 	Real dOmega = 4.0 * M_PI / Npix;

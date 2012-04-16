@@ -1,7 +1,7 @@
 
 #ifndef __DEBUGGGG__
 #define __DEBUGGGG__
-#define _DEBUG__LY__
+//#define _DEBUG__LY__
 #include <string>
 using namespace std;
 
