@@ -89,9 +89,10 @@ int main(int argc, const char **argv){
 
 //*--------------generating fits map------------------*/
 	skymap->MAX_Num_Particle = 16 * 1024;
-	skymap->CPU_trunk = 1024 / 48 / 8 * 1024 * 1024; //~1Gb 
+	skymap->CPU_trunk = 1024 / 48 / 4 * 1024 * 1024; //~1Gb 
 	skymap->PRE_trunk = skymap->CPU_trunk / 64; 
-	cout << skymap->CPU_trunk << " " << skymap->PRE_trunk << endl;
+	skymap->GPU_cores = 2;
+	//cout << skymap->CPU_trunk << " " << skymap->PRE_trunk << endl;
 	skymap->fits_filename = & fits_file;
 	skymap->master = &master;
 	skymap->datafile = &datafile;

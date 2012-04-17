@@ -15,9 +15,9 @@
 #include <iostream>
 #include <vector>
 #include "skymap.h"
-#include <ctime>
+//#include <ctime>
 #include "kernel.h"
-
+#include <sys/time.h>
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 #include <thrust/sort.h>
@@ -118,15 +118,15 @@ bool Skymap::creat_map(){
 
 	//copy rotmatrix into GPU
 	cudaStatus = cudaMalloc((void**)&dev_rotm, sizeof(Real) * 9);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMalloc failed!");
-		return false;
-    }
+    	if (cudaStatus != cudaSuccess) {
+        	fprintf(stderr, "cudaMalloc failed!");
+			return false;
+    	}
 	cudaStatus = cudaMemcpy(dev_rotm, rotmatrix, sizeof(Real) * 9, cudaMemcpyHostToDevice);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMemcpy failed!");
-        return false;
-    }
+    	if (cudaStatus != cudaSuccess) {
+        	fprintf(stderr, "cudaMemcpy failed!");
+        	return false;
+    	}
 
 	//copy o_pos into GPU
 	cudaStatus = cudaMalloc((void**)&dev_opos, sizeof(Real) * 3);
@@ -165,18 +165,24 @@ bool Skymap::creat_map(){
 	cout << "Creating map!!!" << endl;
 	//cout << "---10---20---30---40---50---60---70---80---90--100%\n";
 	//int rec = Nparts / MAX_Num_Particle / 50;
-	clock_t time;
-	time = clock(); 
-	
+	//clock_t time;
+	timeval time_start; 
+	gettimeofday(&time_start, NULL);	
+
 #ifdef _DEBUG__LY__
 	for(int _ip = 0, _jp=0 ; _ip < Nparts, _jp<1; _jp ++ ){
 		//if(_jp != 1017) continue;
 #else
 	for(int _ip = 0, _jp=0 ; _ip < Nparts; _jp ++ ){ 
 #endif
-		clock_t time_a = clock();
+		//clock_t time_a = clock();
+		timeval time_aa;
+		gettimeofday(&time_aa, NULL);
 		cout << "CPU_trunck " << _jp << "--- Particles: " << CPU_trunk + _ip << "/"<< Nparts << "..." << endl;
-		clock_t time_b = clock();
+		//clock_t time_b = clock();
+		timeval time_bb;
+		timeval time_tmp;
+		gettimeofday(&time_bb, NULL);
 		int nmax = 0;
 		int tnmax = 0;
 
@@ -214,10 +220,14 @@ bool Skymap::creat_map(){
 			_pt += nmax;
 		}
 		//cudaFree(dev_par);
-		std::cout <<"step1 cost: " << (clock() - time_b) / 1000.0 << " secs. "<< std::endl;
+		gettimeofday(&time_tmp, NULL);
+		double tick = time_tmp.tv_sec - time_bb.tv_sec + 
+			(time_tmp.tv_usec - time_bb.tv_usec) / 1000000.0;
+		std::cout <<"step1 cost: " << tick << " secs. "<< std::endl;
 
 		//step 2: sort
-		time_b = clock();
+		//time_b = clock();
+		gettimeofday(&time_bb, NULL);
 		// interface to CUDA code
 		thrust::sort_by_key(dev_key.begin(), dev_key.end(), dev_val.begin());
 		thrust::copy(dev_val.begin(), dev_val.end(),host_val.begin());
@@ -239,10 +249,15 @@ bool Skymap::creat_map(){
 			cudaFree(pd_val);
 			free(ph_val);
 		}*/
-		std::cout <<"sort cost: " << (clock() - time_b) / 1000.0 << " secs. "<< std::endl;
+		                 
+		gettimeofday(&time_tmp, NULL);
+		tick = time_tmp.tv_sec - time_bb.tv_sec +
+	        	(double)(time_tmp.tv_usec - time_bb.tv_usec) / 1000000.0;
+		std::cout <<"sort cost: " << tick << " secs. "<< std::endl;
 
 		//step3: calculate flux
-		time_b = clock();
+		//time_b = clock();
+		gettimeofday(&time_bb, NULL);
 		/*cudaStatus = cudaMalloc((void**)&dev_par, sizeof(MapParticle) * MAX_Num_Particle);
 		if (cudaStatus != cudaSuccess) {
 			fprintf(stderr, "cudaMalloc failed!");
@@ -277,9 +292,13 @@ bool Skymap::creat_map(){
 			}
 		}
 		std::cout << endl;
-		std::cout <<"step3 cost: " << (clock() - time_b) / 1000.0 << " secs. "<< std::endl;
-		std::cout << "trunk " << _jp << ": "<< (float)_ip / Nparts *100<<"% finished, costs " << (Real)(clock() - time_a) / 1000.0 << 
-			" secs, escaped: " << (Real)(clock() - time) / 1000.0 << " secs\n" << endl;
+		gettimeofday(&time_tmp, NULL);
+		tick = time_tmp.tv_sec - time_bb.tv_sec +
+			(double)(time_tmp.tv_usec - time_bb.tv_usec) / 1000000.0;
+		std::cout <<"step3 cost: " << tick << " secs. "<< std::endl;
+		std::cout << "trunk " << _jp << ": "<< (float)_ip / Nparts *100<<"% finished, costs " << (time_tmp.tv_sec - time_aa.tv_sec) + 
+			(time_tmp.tv_usec - time_aa.tv_usec) / 1000000.0 << 
+			" secs, escaped: " <<  (time_tmp.tv_sec - time_start.tv_sec) + (time_tmp.tv_usec - time_start.tv_usec) / 1000000.0  << " secs\n" << endl;
 		_jp =_jp;
 /*****************************************************************************************************************/
 	}
@@ -291,8 +310,8 @@ bool Skymap::creat_map(){
 	}*/
 
 	cout << endl;
-	time = clock() - time;
-	cout << "Time cosumed: " << (Real) time / 1000.0  << " seconds" << endl; 
+	//time = clock() - time;
+	//cout << "Time cosumed: " << (Real) time / 1000.0  << " seconds" << endl; 
 #ifdef _DEBUG__LY__
 	//cout << "good3" <<endl;
 	print_out_master(master);
