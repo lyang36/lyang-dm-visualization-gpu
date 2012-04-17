@@ -84,7 +84,6 @@ void print_out_dm( Dm * dm){
 	cout << "M_in_GeV " << dm -> M_in_GeV << endl;// = 46.0;
 	cout << "M_in_cgs " << dm -> M_in_cgs << endl;// = 0.0;
 	cout << "sigma_v_in_cgs "<< dm -> sigma_v_in_cgs << endl;// = 5.0e-26;
-
 	#endif
 }
 

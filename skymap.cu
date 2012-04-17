@@ -44,7 +44,7 @@ Skymap::Skymap(){
 }
 
 bool Skymap::creat_map(){
-
+	cudaError_t cudaStatus;
 	if(_reload == NULL)	reload = false;
 	else reload = *_reload;
 
@@ -85,8 +85,8 @@ bool Skymap::creat_map(){
 	cout << "Particles: " << Nparts << endl;
 	Np = Nparts;
 	num_p = 0;
-	particles = new MapParticle[CPU_trunk];
-	MapParticle * sorted_particles = new MapParticle[CPU_trunk];
+	//particles = new MapParticle[CPU_trunk];
+	//MapParticle * sorted_particles = new MapParticle[CPU_trunk];
 	Real * opos = master->params.opos;
 //	Real fluxes;//  = master.codeunits.annihilation_flux_to_cgs * density * mass / (4.0 * !pi * distances^2)
 	long Nside = master->map.Nside;
@@ -94,7 +94,7 @@ bool Skymap::creat_map(){
 	int Npix_map = 12 * Nside*Nside;
 	Real dOmega = 4.0 * PI / Npix_map;
 	Real theta0 = acos( 1.0 - dOmega/(2.0*PI) );
-
+	//cudaError_t cudaStatus;
 	
 	Real * allskymap = (Real *) calloc(Npix_map, sizeof(Real));
 	//Real * dev_allskymap;
@@ -106,12 +106,15 @@ bool Skymap::creat_map(){
 	//int * dev_keys;
 	//int * dev_values;
 
-
-	cudaError_t cudaStatus = cudaSetDevice(0);
+	cudaStatus = cudaSuccess;
+	cudaStatus = cudaSetDevice(0);
 	if (cudaStatus != cudaSuccess) {
         fprintf(stderr, "cudaSetDevice failed!  Do you have a CUDA-capable GPU installed?");
         return false;
-    }
+    	}
+		
+	particles = new MapParticle[CPU_trunk];
+	MapParticle * sorted_particles = new MapParticle[CPU_trunk];
 
 	//copy rotmatrix into GPU
 	cudaStatus = cudaMalloc((void**)&dev_rotm, sizeof(Real) * 9);
