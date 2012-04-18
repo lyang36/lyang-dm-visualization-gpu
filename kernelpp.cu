@@ -205,7 +205,18 @@ cudaError_t doWithCuda_Par(const long MAX_Num_Paritcle, const long Nside,
 	}
 //----------------------------------output satistics---------------------------------//	
 	
-	
+	ofstream myfile;
+    myfile.open (stfile, ios::out | ios::app | ios::binary);
+    
+    if (myfile.is_open()) { 
+        for (int i; i < nmax; i++) {
+            int pixs= (int)(host_par[i].xpos);
+            myfile.write((char *) &pixs, sizeof(int));
+        }
+        
+        /* ok, proceed with output */ 
+    }
+    myfile.close();
 	return cudaStatus;
 	
 
