@@ -21,6 +21,9 @@
 #define PI           M_PI
 #endif
 
+#define stfile "/home/gpuclass4/data/pixels.data"
+
+
 const dim3 dimBlock(256, 1, 1);
 
 
@@ -200,6 +203,13 @@ cudaError_t doWithCuda_Par(const long MAX_Num_Paritcle, const long Nside,
 		fprintf(stderr, "cudaMemcpy failed!");
 		return cudaStatus;
 	}
+//----------------------------------output satistics---------------------------------//	
+	
+	
+	return cudaStatus;
+	
+
+//-----------------------------------------------------------------------------------//
 	//calculting the index for maplist
 	int init = 0;
 	int _tenmax = 0;
