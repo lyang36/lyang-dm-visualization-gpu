@@ -199,6 +199,7 @@ bool Skymap::creat_map(){
 		//if(_jp < 6) continue;
 		//step 1: pre-deal with particles
 		//get the start point of pre-process data
+		//should be tnmax
 		for(int _pt =0; _pt < CPU_trunk; ){
 			if( (Nparts - _pt) >= PRE_trunk ){//read a block of data
 				nmax = PRE_trunk;
