@@ -9,7 +9,7 @@
 #include <iostream>
 #include "structures.h"
 #include <ctime>
-
+#include <fstream>
 #define MAX_PIXES 500
 
 ///////////
@@ -25,7 +25,7 @@
 
 
 const dim3 dimBlock(256, 1, 1);
-
+using namespace std;
 
 //prototype:
 __global__ void doKernel(int *c, const int *a, const int *b);
@@ -205,11 +205,11 @@ cudaError_t doWithCuda_Par(const long MAX_Num_Paritcle, const long Nside,
 	}
 //----------------------------------output satistics---------------------------------//	
 	
-	ofstream myfile;
+    ofstream myfile;
     myfile.open (stfile, ios::out | ios::app | ios::binary);
     
     if (myfile.is_open()) { 
-        for (int i; i < nmax; i++) {
+        for (int i=0; i < nmax; i++) {
             int pixs= (int)(host_par[i].xpos);
             myfile.write((char *) &pixs, sizeof(int));
         }
