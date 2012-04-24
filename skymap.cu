@@ -280,7 +280,7 @@ bool Skymap::creat_map(){
 			//decide whether or not do step 1
 			//if > 5000 exceeds 
 			cudaStatus = doWithCuda_Par(MAX_Num_Particle, Nside, theta0, 1, nmax, allskymap,
-			dev_par, particles + _pt, dev_rotm, dev_opos);
+			dev_par, particles + _pt, dev_rotm, dev_opos, master);
 			if (cudaStatus != cudaSuccess) {
 				fprintf(stderr, "Kernel failed!");
 				return false;

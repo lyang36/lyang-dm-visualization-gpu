@@ -31,7 +31,7 @@ struct mapMap{
 cudaError_t doWithCuda_Par(const long MAX_Num_Paritcle, const long Nside, 
 		 const Real theta0, const Real fluxfactor, const long nmax,
 		 Real *allskymap, MapParticle * dev_par, MapParticle * host_par,
-		 Real * dev_rotm, Real * dev_opos);
+		 Real * dev_rotm, Real * dev_opos,  Master * master);
 
 cudaError_t doWithCuda_pre(const long MAX_Num_Paritcle, const long Nside, 
 		 const Real theta0, const Real fluxfactor, const long nmax,

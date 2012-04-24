@@ -178,7 +178,7 @@ cudaError_t run_kernel(const long MAX_Num_Paritcle, const long Nside,
 cudaError_t doWithCuda_Par(const long MAX_Num_Paritcle, const long Nside, 
 		 const Real theta0, const Real fluxfactor, const long nmax,
 		 Real *allskymap, MapParticle * dev_par, MapParticle * host_par,
-		 Real * dev_rotm, Real * dev_opos)
+		 Real * dev_rotm, Real * dev_opos, Master * master)
 {
 	cudaError_t cudaStatus;
 	dim3 dimGrid(MAX_Num_Paritcle/dimBlock.x + 1, 1, 1);
@@ -213,7 +213,14 @@ cudaError_t doWithCuda_Par(const long MAX_Num_Paritcle, const long Nside,
     if (myfile.is_open() && fluxst.is_open()) { 
         for (int i=0; i < nmax; i++) {
             int pixs= (int)(host_par[i].xpos);
-	    double flux = host_par[i].density;
+	    double flux = host_par[i].mass;
+        Real unit_factor = pow(pow((master -> natconst.c_in_cgs), 2) /
+                            (master->units.eV_in_cgs * 1.0e9), 2) / (master->units.Mpc_in_cgs * 1.0e-3);
+        for(int i = 0; i < Npix_in_map; i++){
+        float amap = (float)((double)(unit_factor) / 
+                            (double)(master->map.dOmega) * double (fluxfactor) * (double)flux);
+        flux = amap;
+        }
 	    //cout << pixs << "  ";
             myfile.write((char *) &pixs, sizeof(int));
 	    fluxst.write((char *) &flux, sizeof(double));
