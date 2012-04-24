@@ -21,7 +21,8 @@
 #define PI           M_PI
 #endif
 
-#define stfile "/home/gpuclass4/data/pixels.data"
+#define stfile "/home/gpuclass4/data/pixels_1.data"
+#define fluxfile "/home/gpuclass4/data/flux_1.data"
 
 
 const dim3 dimBlock(256, 1, 1);
@@ -207,17 +208,22 @@ cudaError_t doWithCuda_Par(const long MAX_Num_Paritcle, const long Nside,
 	
     ofstream myfile;
     myfile.open (stfile, ios::out | ios::app | ios::binary);
-    
-    if (myfile.is_open()) { 
+    ofstream fluxst;
+    fluxst.open(fluxfile, ios::out | ios::app | ios::binary); 
+    if (myfile.is_open() && fluxst.is_open()) { 
         for (int i=0; i < nmax; i++) {
             int pixs= (int)(host_par[i].xpos);
+	    double flux = host_par[i].density;
+	    //cout << pixs << "  ";
             myfile.write((char *) &pixs, sizeof(int));
+	    fluxst.write((char *) &flux, sizeof(double));
         }
-        
         /* ok, proceed with output */ 
     }
+    cout << endl;
     myfile.close();
-	return cudaStatus;
+    fluxst.close();
+    return cudaStatus;
 	
 
 //-----------------------------------------------------------------------------------//
