@@ -297,8 +297,7 @@ bool Skymap::creat_map(){
 
 
 	cout << endl;
-	time = clock() - time;
-	cout << "Time cosumed: " << (Real) time / 1000.0  << " seconds" << endl; 
+	cout << "Time cosumed: " << (Real)(clock() - time_start) / 1000.0  << " seconds" << endl; 
 #ifdef _DEBUG__LY__
 	print_out_master(master);
 #endif
