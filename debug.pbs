@@ -3,4 +3,4 @@
 #PBS -l walltime=60:00
 #PBS -l nodes=1
 cd $PBS_O_WORKDIR
-/home/gpuclass4/lyang-dm-visualization-gpu/VL2_gpu
+/home/gpuclass4/lyang-dm-visualization/VL2_gpu

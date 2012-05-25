@@ -2,6 +2,7 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
+#include <cmath>
 #include <string>
 #include "structures.h"
 #include "setparams.h"
@@ -89,7 +90,7 @@ int main(int argc, const char **argv){
 
 //*--------------generating fits map------------------*/
 	skymap->MAX_Num_Particle = 16 * 1024;
-	skymap->CPU_trunk = 1024 / 48 * 1024 * 1024; //~1Gb 
+	skymap->CPU_trunk = 1024 / 64 * 1024 * 1024; //~1Gb 
 	skymap->PRE_trunk = skymap->CPU_trunk / 64; 
 	skymap->fits_filename = & fits_file;
 	skymap->master = &master;
