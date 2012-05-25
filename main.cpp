@@ -89,9 +89,15 @@ int main(int argc, const char **argv){
 /*-----------------------------------------------------------------------------------------*/
 
 //*--------------generating fits map------------------*/
+<<<<<<< HEAD
 	skymap->MAX_Num_Particle = 16 * 1024;
 	skymap->CPU_trunk = 1024 / 64 * 1024 * 1024; //~1Gb 
 	skymap->PRE_trunk = skymap->CPU_trunk / 64; 
+=======
+	skymap->GPU_chunk = 16 * 1024;
+	skymap->CPU_chunk = 1024 / 48 * 1024 * 1024; //~1Gb 
+	skymap->PRE_chunk = skymap->CPU_chunk / 64; 
+>>>>>>> 93503fa834d235252b3fb002350520aeb822840a
 	skymap->fits_filename = & fits_file;
 	skymap->master = &master;
 	skymap->datafile = &datafile;

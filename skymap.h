@@ -15,10 +15,12 @@ private:
 
 public:
 	long Np;
-	long MAX_Num_Particle; 
-	long CPU_trunk;
-	long PRE_trunk;   //pre-calculation with the data
-		//depend on the memory, set up a maximum number of particles that could exist in the memery
+    long GPU_chunk;  //number of particles in the GPU memory
+	//long MAX_Num_Particle; 
+	long CPU_chunk;  //number of paritcles in the CPU memory 
+	long PRE_chunk;  //number of particles of pre-calculation in GPU memory
+                     // with the data
+		             //depend on the memory, set up a maximum number of particles that could exist in the memery
 	Master *master;
 	//Allparts * particles;
 	string *fits_filename;

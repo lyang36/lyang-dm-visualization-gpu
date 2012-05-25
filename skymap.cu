@@ -87,9 +87,9 @@ bool Skymap::creat_map(){
     
     //setup cpu-memory for particles
 	num_p = 0;
-	particles = new MapParticle[CPU_trunk];
+	particles = new MapParticle[CPU_chunk];
     //sorted cpu-memory for particles
-	MapParticle * sorted_particles = new MapParticle[CPU_trunk];
+	MapParticle * sorted_particles = new MapParticle[CPU_chunk];
     
     //setup observation position
 	Real * opos = master->params.opos;
@@ -160,30 +160,25 @@ bool Skymap::creat_map(){
 
     
 	//allocate particle memery into GPU
-	int parsize = PRE_trunk > MAX_Num_Particle ? PRE_trunk : MAX_Num_Particle;
+	int parsize = PRE_chunk > GPU_chunk ? PRE_chunk : GPU_chunk;
 	cudaStatus = cudaMalloc((void**)&dev_par, sizeof(MapParticle) * parsize);
 	if (cudaStatus != cudaSuccess) {
 		fprintf(stderr, "cudaMalloc failed!");
 		return false;
 	}
 
-	//<debug
-	//int c = sizeof(MapParticle);
-	//int d = sizeof(MapParticle) * nmax;
-	//debug>
-	//thrust::host_vector<int> host_key(CPU_trunk);
+
 	//use for sorting
-	thrust::device_vector<int> dev_key(CPU_trunk);
-	thrust::device_vector<int> dev_val(CPU_trunk);
-	thrust::host_vector<int> host_val(CPU_trunk);
+	thrust::device_vector<int> dev_key(CPU_chunk);
+	thrust::device_vector<int> dev_val(CPU_chunk);
+	thrust::host_vector<int> host_val(CPU_chunk);
 	// obtain raw pointer to device vectors memory
 	int * pd_key = thrust::raw_pointer_cast(&dev_key[0]);
 	int * pd_val = thrust::raw_pointer_cast(&dev_val[0]);
 
 
 	cout << "Creating map!!!" << endl;
-	//cout << "---10---20---30---40---50---60---70---80---90--100%\n";
-	int rec = Nparts / MAX_Num_Particle / 50;
+	int rec = Nparts / GPU_chunk / 50;
 	clock_t time;
 	time = clock(); 
 	
@@ -194,16 +189,16 @@ bool Skymap::creat_map(){
 	for(int _ip = 0, _jp=0 ; _ip < Nparts; _jp ++ ){ 
 #endif
 		clock_t time_a = clock();
-		cout << "CPU_trunck " << _jp << "--- Particles: " << CPU_trunk + _ip << "/"<< Nparts << "..." << endl;
+		cout << "CPU_trunck " << _jp << "--- Particles: " << CPU_chunk + _ip << "/"<< Nparts << "..." << endl;
 		clock_t time_b = clock();
 		int nmax = 0;
 		int tnmax = 0;
 
-		//read to CPU trunk
-		if( (Nparts - _ip) >= CPU_trunk ){//read a block of data
-			data_input_file.read((char*)particles, sizeof(MapParticle) * CPU_trunk); 	
-			_ip += CPU_trunk;
-			tnmax = CPU_trunk;
+		//read to CPU chunk
+		if( (Nparts - _ip) >= CPU_chunk ){//read a block of data
+			data_input_file.read((char*)particles, sizeof(MapParticle) * CPU_chunk); 	
+			_ip += CPU_chunk;
+			tnmax = CPU_chunk;
 		}else{
 			tnmax = (Nparts - _ip);
 			data_input_file.read((char*)particles, sizeof(MapParticle) * tnmax);
@@ -212,11 +207,11 @@ bool Skymap::creat_map(){
 		//if(_jp < 6) continue;
 		//step 1: pre-deal with particles
 		//get the start point of pre-process data
-		for(int _pt =0; _pt < CPU_trunk; ){
-			if( (Nparts - _pt) >= PRE_trunk ){//read a block of data
-				nmax = PRE_trunk;
+		for(int _pt =0; _pt < CPU_chunk; ){
+			if( (Nparts - _pt) >= PRE_chunk ){//read a block of data
+				nmax = PRE_chunk;
 			}else{
-				nmax = (CPU_trunk - _pt);
+				nmax = (CPU_chunk - _pt);
 			}
 
 			cudaStatus = cudaMemcpy(dev_par, particles + _pt, sizeof(MapParticle) * nmax, cudaMemcpyHostToDevice);
@@ -224,7 +219,7 @@ bool Skymap::creat_map(){
 				fprintf(stderr, "cudaMemcpy failed!");
 				return false;
 			}
-			cudaStatus = doWithCuda_pre(PRE_trunk, Nside, theta0, 1, nmax, allskymap,
+			cudaStatus = doWithCuda_pre(PRE_chunk, Nside, theta0, 1, nmax, allskymap,
 			 dev_par, particles + _pt, dev_rotm, dev_opos, pd_key + _pt, pd_val + _pt, _pt);
 			if (cudaStatus != cudaSuccess) {
 				fprintf(stderr, "Kernel failed!");
@@ -240,7 +235,7 @@ bool Skymap::creat_map(){
 		// interface to CUDA code
 		thrust::sort_by_key(dev_key.begin(), dev_key.end(), dev_val.begin());
 		thrust::copy(dev_val.begin(), dev_val.end(),host_val.begin());
-		for(int _pkk = CPU_trunk - 1; _pkk >=0; _pkk --){
+		for(int _pkk = CPU_chunk - 1; _pkk >=0; _pkk --){
 			int pg =host_val[_pkk];
 			sorted_particles[_pkk] = particles[pg];		
 		}
@@ -262,17 +257,17 @@ bool Skymap::creat_map(){
 
 		//step3: calculate flux
 		time_b = clock();
-		/*cudaStatus = cudaMalloc((void**)&dev_par, sizeof(MapParticle) * MAX_Num_Particle);
+		/*cudaStatus = cudaMalloc((void**)&dev_par, sizeof(MapParticle) * GPU_chunk);
 		if (cudaStatus != cudaSuccess) {
 			fprintf(stderr, "cudaMalloc failed!");
 			exit(0);
 		}*/
 
-		for(int _pt =0, _ptn = 0; _pt < CPU_trunk; _ptn++ ){
-			if( (Nparts - _pt) >= MAX_Num_Particle ){//read a block of data
-				nmax = MAX_Num_Particle;
+		for(int _pt =0, _ptn = 0; _pt < CPU_chunk; _ptn++ ){
+			if( (Nparts - _pt) >= GPU_chunk ){//read a block of data
+				nmax = GPU_chunk;
 			}else{
-				nmax = (CPU_trunk - _pt);
+				nmax = (CPU_chunk - _pt);
 			}
 			//if(_pt < 2031616){ _pt += nmax; continue;}
 			cudaStatus = cudaMemcpy(dev_par, particles + _pt, sizeof(MapParticle) * nmax, cudaMemcpyHostToDevice);
@@ -282,7 +277,7 @@ bool Skymap::creat_map(){
 			}
 			//decide whether or not do step 1
 			//if > 5000 exceeds 
-			cudaStatus = doWithCuda_Par(MAX_Num_Particle, Nside, theta0, 1, nmax, allskymap,
+			cudaStatus = doWithCuda_Par(GPU_chunk, Nside, theta0, 1, nmax, allskymap,
 			dev_par, particles + _pt, dev_rotm, dev_opos);
 			if (cudaStatus != cudaSuccess) {
 				fprintf(stderr, "Kernel failed!");
@@ -290,14 +285,14 @@ bool Skymap::creat_map(){
 			}
 			_pt += nmax;
 		    if(_ptn % 10 ==0 ){
-				std::cout << ".";// << _pt << "/" << CPU_trunk << endl;
+				std::cout << ".";// << _pt << "/" << CPU_chunk << endl;
 				std::cout.flush();
 		
 			}
 		}
 		std::cout << endl;
 		std::cout <<"step3 cost: " << (clock() - time_b) / 1000.0 << " secs. "<< std::endl;
-		std::cout << "trunk " << _jp << ": "<< (float)_ip / Nparts *100<<"% finished, costs " << (Real)(clock() - time_a) / 1000.0 << 
+		std::cout << "chunk " << _jp << ": "<< (float)_ip / Nparts *100<<"% finished, costs " << (Real)(clock() - time_a) / 1000.0 << 
 			" secs, escaped: " << (Real)(clock() - time) / 1000.0 << " secs\n" << endl;
 		_jp =_jp;
 /*****************************************************************************************************************/
