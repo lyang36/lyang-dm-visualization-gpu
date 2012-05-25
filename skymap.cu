@@ -50,7 +50,8 @@ bool Skymap::creat_map(){
 	else rotate = *_rotate;
 
 	//allocate memory for map
-	const int LP = 10000;
+	//const int LP = 10000;
+    
     //the particle numbers
 	int Nparts = 0;
 
@@ -122,9 +123,9 @@ bool Skymap::creat_map(){
 	MapParticle * dev_par = 0;
     
     //key and values for sorting
-	int * host_keys;
-	int * dev_keys;
-	int * dev_values;
+	//int * host_keys;
+	//int * dev_keys;
+	//int * dev_values;
 
     //checkout is there any GPU
 	cudaError_t cudaStatus = cudaSetDevice(0);
@@ -178,20 +179,26 @@ bool Skymap::creat_map(){
 
 
 	cout << "Creating map!!!" << endl;
-	int rec = Nparts / GPU_chunk / 50;
-	clock_t time;
-	time = clock(); 
+	//int rec = Nparts / GPU_chunk / 50;
+    
+    //recording time
+	clock_t time_start;
+	time_start = clock(); 
 	
 #ifdef _DEBUG__LY__
 	for(int _ip = 0, _jp=0 ; _ip < Nparts, _jp<1; _jp ++ ){
-		//if(_jp != 1017) continue;
 #else
 	for(int _ip = 0, _jp=0 ; _ip < Nparts; _jp ++ ){ 
 #endif
-		clock_t time_a = clock();
-		cout << "CPU_trunck " << _jp << "--- Particles: " << CPU_chunk + _ip << "/"<< Nparts << "..." << endl;
-		clock_t time_b = clock();
+/*****************************************************************************************************************/
+		clock_t time_loop_start = clock();
+		cout << ">>>>CPU_chunk " << _jp << "--- Particles: " << CPU_chunk + _ip << "/"<< Nparts << "..." << endl;
+        
+		clock_t time_step_start = clock();
+                
 		int nmax = 0;
+        
+        //tnmax is the number of particles read into the CPU memory from the hard drive
 		int tnmax = 0;
 
 		//read to CPU chunk
@@ -204,9 +211,11 @@ bool Skymap::creat_map(){
 			data_input_file.read((char*)particles, sizeof(MapParticle) * tnmax);
 			_ip += tnmax;
 		}
-		//if(_jp < 6) continue;
+        std::cout <<"1) read from disk cost: " << (clock() - time_step_start) / 1000.0 << " secs. "<< std::endl;
+        
 		//step 1: pre-deal with particles
 		//get the start point of pre-process data
+        time_step_start = clock();
 		for(int _pt =0; _pt < CPU_chunk; ){
 			if( (Nparts - _pt) >= PRE_chunk ){//read a block of data
 				nmax = PRE_chunk;
@@ -228,41 +237,29 @@ bool Skymap::creat_map(){
 			_pt += nmax;
 		}
 		//cudaFree(dev_par);
-		std::cout <<"step1 cost: " << (clock() - time_b) / 1000.0 << " secs. "<< std::endl;
+		std::cout <<"2) pre-calculating cost: " << (clock() - time_step_start) / 1000.0 << " secs. "<< std::endl;
 
 		//step 2: sort
-		time_b = clock();
+		time_step_start = clock();
 		// interface to CUDA code
 		thrust::sort_by_key(dev_key.begin(), dev_key.end(), dev_val.begin());
 		thrust::copy(dev_val.begin(), dev_val.end(),host_val.begin());
+        //actually sort on the particles
 		for(int _pkk = CPU_chunk - 1; _pkk >=0; _pkk --){
 			int pg =host_val[_pkk];
 			sorted_particles[_pkk] = particles[pg];		
 		}
-		{//swape
+		{//swape the sorted particles with the unsorted particles
 			MapParticle * temp;
 			temp = particles;
 			particles = sorted_particles;
 			sorted_particles = temp;
 		}
-/*		{//clear
-			dev_key.clear();
-			dev_val.clear();
-			host_val.clear();
-			cudaFree(pd_key);
-			cudaFree(pd_val);
-			free(ph_val);
-		}*/
-		std::cout <<"sort cost: " << (clock() - time_b) / 1000.0 << " secs. "<< std::endl;
 
+		std::cout <<"3) sort cost: " << (clock() - time_step_start) / 1000.0 << " secs. "<< std::endl;
+        
 		//step3: calculate flux
-		time_b = clock();
-		/*cudaStatus = cudaMalloc((void**)&dev_par, sizeof(MapParticle) * GPU_chunk);
-		if (cudaStatus != cudaSuccess) {
-			fprintf(stderr, "cudaMalloc failed!");
-			exit(0);
-		}*/
-
+		time_step_start = clock();
 		for(int _pt =0, _ptn = 0; _pt < CPU_chunk; _ptn++ ){
 			if( (Nparts - _pt) >= GPU_chunk ){//read a block of data
 				nmax = GPU_chunk;
@@ -291,24 +288,18 @@ bool Skymap::creat_map(){
 			}
 		}
 		std::cout << endl;
-		std::cout <<"step3 cost: " << (clock() - time_b) / 1000.0 << " secs. "<< std::endl;
-		std::cout << "chunk " << _jp << ": "<< (float)_ip / Nparts *100<<"% finished, costs " << (Real)(clock() - time_a) / 1000.0 << 
-			" secs, escaped: " << (Real)(clock() - time) / 1000.0 << " secs\n" << endl;
+		std::cout <<"4) flux calculating cost: " << (clock() - time_step_start) / 1000.0 << " secs. "<< std::endl;
+		std::cout << ">>>>chunk " << _jp << ": "<< (float)_ip / Nparts *100<<"% finished, costs " << (Real)(clock() - time_loop_start) / 1000.0 << 
+			" secs, escaped: " << (Real)(clock() - time_start) / 1000.0 << " secs\n" << endl;
 		_jp =_jp;
 /*****************************************************************************************************************/
 	}
 
-	/*cudaStatus = cudaMemcpy(allskymap, dev_allskymap, sizeof(Real) * Npix_map, cudaMemcpyDeviceToHost);
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaMemcpy failed!");
-		return false;
-	}*/
 
 	cout << endl;
 	time = clock() - time;
 	cout << "Time cosumed: " << (Real) time / 1000.0  << " seconds" << endl; 
 #ifdef _DEBUG__LY__
-	//cout << "good3" <<endl;
 	print_out_master(master);
 #endif
 
@@ -322,8 +313,6 @@ bool Skymap::creat_map(){
 			(double)(master->map.dOmega) * double (fluxfactor) * (double) allskymap[i]);
 		allskymap[i] = amap;
 	}
-//	cblas_dscal( Npix_in_map, unit_factor / master->map.dOmega, allskymap, 1);
-
 
 #ifdef _DEBUG__LY__
 
@@ -352,11 +341,7 @@ bool Skymap::creat_map(){
 	}*/
 #endif
 
-	//float * newskymap = (float *) calloc(Npix_map, sizeof(float));
-	//for (int i=0; i < Npix_map; i++){
-	//	newskymap[i] = allskymap[i];
-	//}
-	//write_healpix_map(newskymap,Nside,"trymap.fits", 0, "G");
+
 	cout << "Writing to file \"" << *fits_filename << "\":" << endl;
 	ofstream output_file (fits_filename -> c_str(), ios::out | ios::binary);
 	if(output_file.good()){
