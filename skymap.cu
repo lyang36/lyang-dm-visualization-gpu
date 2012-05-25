@@ -6,7 +6,6 @@
 #include <cmath>
 #include <fstream>
 #include <string>
-//#include "tipsydefs.h"
 #include "mapparticle.h"
 #include "info.h"
 #include "structures.h"
@@ -28,10 +27,6 @@
 #include "device_launch_parameters.h"
 #include <cuda.h>
 #include <cstdio>
-//#include <b40c/radix_sort/enactor.cuh>
-//#include <b40c/util/multiple_buffering.cuh>
-
-//#include 
 
 
 using namespace std;;
@@ -39,7 +34,10 @@ using namespace std;;
 
 
 Skymap::Skymap(){
+    //if set _reload, then reload
 	_reload = NULL;
+    //if set _rotate, then rotate
+    //if not set, not doing rotate
 	_rotate = NULL;
 }
 
@@ -53,6 +51,7 @@ bool Skymap::creat_map(){
 
 	//allocate memory for map
 	const int LP = 10000;
+    //the particle numbers
 	int Nparts = 0;
 
 	//get rotation matrix
@@ -75,7 +74,8 @@ bool Skymap::creat_map(){
 #ifdef _DEBUG__LY__
 	//cout << "good1" <<endl;
 #endif
-	// Read particle_numbers
+	
+    // Read particle_numbers
     ifstream data_input_file((*datafile).c_str(), ios::binary);
 	if(data_input_file.bad()){
 		cout << "Data Error!!!" << endl;
@@ -84,29 +84,49 @@ bool Skymap::creat_map(){
     data_input_file.read((char*)&Nparts, sizeof(Nparts));  
 	cout << "Particles: " << Nparts << endl;
 	Np = Nparts;
+    
+    //setup cpu-memory for particles
 	num_p = 0;
 	particles = new MapParticle[CPU_trunk];
-	MapParticle * sorted_particles = new MapParticle[CPU_trunk];
+    //sorted cpu-memory for particles
+	//MapParticle * sorted_particles = new MapParticle[CPU_trunk];
+    
+    //setup observation position
 	Real * opos = master->params.opos;
-//	Real fluxes;//  = master.codeunits.annihilation_flux_to_cgs * density * mass / (4.0 * !pi * distances^2)
+    
+    //setup Nside of Healpix map
 	long Nside = master->map.Nside;
+    
+    //setup Total Pix number of Healpix map
 	long Npix_in_map = master->map.Npix;
-	int Npix_map = 12 * Nside*Nside;
-	Real dOmega = 4.0 * PI / Npix_map;
+    
+    //this guy is the same of Npix_in_map
+	//int Npix_map = 12 * Nside * Nside;
+    
+    //the omega element of each pix
+	Real dOmega = 4.0 * PI / Npix_in_map;
 	Real theta0 = acos( 1.0 - dOmega/(2.0*PI) );
 
 	
-	Real * allskymap = (Real *) calloc(Npix_map, sizeof(Real));
-	//Real * dev_allskymap;
+    //alloc and initialize the allksymap array
+	Real * allskymap = (Real *) calloc(Npix_in_map, sizeof(Real));
+    
+    //pointers to the rotmatrix in the GPU memory
 	Real * dev_rotm = 0; //(should be constant)/
 	Real * dev_opos = 0; //(should be constant)/
+    
+    //final factor for the flux
 	double fluxfactor = master->codeunits.annihilation_flux_to_cgs;
+    
+    //pointers to the particle memory in the GPU memory
 	MapParticle * dev_par = 0;
+    
+    //key and values for sorting
 	int * host_keys;
 	int * dev_keys;
 	int * dev_values;
 
-
+    //checkout is there any GPU
 	cudaError_t cudaStatus = cudaSetDevice(0);
 	if (cudaStatus != cudaSuccess) {
         fprintf(stderr, "cudaSetDevice failed!  Do you have a CUDA-capable GPU installed?");
@@ -125,6 +145,7 @@ bool Skymap::creat_map(){
         return false;
     }
 
+    
 	//copy o_pos into GPU
 	cudaStatus = cudaMalloc((void**)&dev_opos, sizeof(Real) * 3);
     if (cudaStatus != cudaSuccess) {
@@ -137,6 +158,7 @@ bool Skymap::creat_map(){
         return false;
     }
 
+    
 	//allocate particle memery into GPU
 	int parsize = PRE_trunk > MAX_Num_Particle ? PRE_trunk : MAX_Num_Particle;
 	cudaStatus = cudaMalloc((void**)&dev_par, sizeof(MapParticle) * parsize);
@@ -343,7 +365,7 @@ bool Skymap::creat_map(){
 	cout << "Writing to file \"" << *fits_filename << "\":" << endl;
 	ofstream output_file (fits_filename -> c_str(), ios::out | ios::binary);
 	if(output_file.good()){
-		output_file.write ((char *)allskymap, Npix_map * sizeof(Real));
+		output_file.write ((char *)allskymap, Npix_in_map * sizeof(Real));
 	}else{
 		cout << "Writing Error!";
 	}
