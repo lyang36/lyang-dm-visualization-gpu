@@ -89,7 +89,7 @@ bool Skymap::creat_map(){
 	num_p = 0;
 	particles = new MapParticle[CPU_trunk];
     //sorted cpu-memory for particles
-	//MapParticle * sorted_particles = new MapParticle[CPU_trunk];
+	MapParticle * sorted_particles = new MapParticle[CPU_trunk];
     
     //setup observation position
 	Real * opos = master->params.opos;
