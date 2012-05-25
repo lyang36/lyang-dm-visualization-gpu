@@ -87,6 +87,8 @@ int main(int argc, const char **argv){
 	//cout <<"MASTER:   "<< master -> params.Lbox_in_Mpc << endl;
 /*-----------------------------------------------------------------------------------------*/
 
+    
+    
 //*--------------generating fits map------------------*/
 	skymap->GPU_chunk = 16 * 1024;
 	skymap->CPU_chunk = 1024 / 48 * 1024 * 1024; //~1Gb 
