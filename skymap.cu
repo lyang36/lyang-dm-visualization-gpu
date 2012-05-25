@@ -231,7 +231,7 @@ bool Skymap::creat_map(){
 			cudaStatus = doWithCuda_pre(PRE_chunk, Nside, theta0, 1, nmax, allskymap,
 			 dev_par, particles + _pt, dev_rotm, dev_opos, pd_key + _pt, pd_val + _pt, _pt);
 			if (cudaStatus != cudaSuccess) {
-				fprintf(stderr, "Kernel failed!");
+				fprintf(stderr, "pre_calculation Kernel failed!");
 				return false;
 			}
 			_pt += nmax;
@@ -277,7 +277,7 @@ bool Skymap::creat_map(){
 			cudaStatus = doWithCuda_Par(GPU_chunk, Nside, theta0, 1, nmax, allskymap,
 			dev_par, particles + _pt, dev_rotm, dev_opos);
 			if (cudaStatus != cudaSuccess) {
-				fprintf(stderr, "Kernel failed!");
+				fprintf(stderr, "map calculation Kernel failed!");
 				return false;
 			}
 			_pt += nmax;
