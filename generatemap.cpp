@@ -89,16 +89,16 @@ void generate_map_step1(const long Nside,
 	}
 	MapParticle mp = particles[i];
 	Real density = mp.density;
-	Real hsmooth = mp.hsmooth;
-	Real fluxes = mp.mass;
+//	Real hsmooth = mp.hsmooth;
+//	Real fluxes = mp.mass;
 	Real phi = mp.zpos;
 	Real theta = mp.ypos;
 	Real angular_radius = mp.hsmooth;
     
 #ifdef POS_FLOAT
-	float3 _opos = {opos[0], opos[1], opos[2]};
+//	float3 _opos = {opos[0], opos[1], opos[2]};
 #else
-	double3 _opos = {opos[0], opos[1], opos[2]};
+//	double3 _opos = {opos[0], opos[1], opos[2]};
 #endif
     
 	if( density >= 0.0){

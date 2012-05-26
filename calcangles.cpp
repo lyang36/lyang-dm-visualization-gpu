@@ -1,10 +1,11 @@
+//calculate the angle for given position in terms with the rotation matrix
 
 __device__ 
 void calc_angles( Real xpos, Real ypos, Real zpos, Real &distances, 
                  Real * opos, Real *rotmatrix, Real & costheta, Real &phi){
+    
 	Real vec[] = { xpos, ypos, zpos};
-	//Real temp[] = {0, 0, 0};
-	//cblas_dgemv(CblasColMajor, CblasNoTrans, 3, 3, 1.0, rotmatrix, 3, vec, 1, 1.0, temp, 1 );
+
 	Real xcoord;
 	Real ycoord;
 	Real zcoord;

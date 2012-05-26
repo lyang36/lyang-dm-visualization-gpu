@@ -1,6 +1,4 @@
-
-
-
+//calculate the weight for a given pixel
 __device__ __host__
 Real calc_weight(const long nside_, const int pix, const Real vecx, 
                  const Real vecy, const Real vecz, const Real norm, const Real angular_radius){
@@ -9,12 +7,13 @@ Real calc_weight(const long nside_, const int pix, const Real vecx,
 	Real this_vecx = sin(_t) * cos(_p);
 	Real this_vecy = sin(_t) * sin(_p);
 	Real this_vecz = cos(_t);
-	Real d2 = acos( this_vecx * vecx + this_vecy * vecy + this_vecz * vecz) / angular_radius;
+	Real d2 = acos(this_vecx * vecx + this_vecy * vecy + this_vecz * vecz) / angular_radius;
 	d2 = d2*d2;
-	//norm += exp(-0.5 * d2 / 0.333) / norm;  
 	return exp(-0.5 * d2 / 0.333) / norm;
 }
 
+
+//count how many pixels in this ring
 __device__ __host__
 void in_ring_count(long nside_, int iz, Real phi0, Real dphi,
                    const Real vecx, const Real vecy, const Real vecz, 
@@ -22,8 +21,6 @@ void in_ring_count(long nside_, int iz, Real phi0, Real dphi,
 	long npface_ = nside_ * nside_;
 	long ncap_   = (npface_-nside_)<<1;
 	long npix_   = 12 * npface_;
-    //	Real fact2_  = 4. / (Real) npix_;
-    //	Real fact1_  = (nside_<<1) * (Real) fact2_;
     
 	int nr, ir, ipix1;
 	Real shift=0.5;
@@ -54,9 +51,6 @@ void in_ring_count(long nside_, int iz, Real phi0, Real dphi,
 	if (dphi > (PI-1e-7))
 		for (int i=ipix1; i<=ipix2; ++i){
 			num++;		
-			/*if( ++pos < maxnum){
-             listir[(pos)] = i;
-             }*/
 			norm += calc_weight(nside_, i, vecx, vecy, vecz, 1.0, angular_radius);
         }
 	else
@@ -67,12 +61,9 @@ void in_ring_count(long nside_, int iz, Real phi0, Real dphi,
 		if (pixnum<ipix1) pixnum += nr;
 		for (int i=ip_lo; i<=ip_hi; ++i, ++pixnum)
 		{
-			if (pixnum>ipix2) pixnum -= nr;
+			if (pixnum > ipix2) pixnum -= nr;
 			num ++;
 			norm += calc_weight(nside_, pixnum, vecx, vecy, vecz, 1.0, angular_radius);
-			/*if( ++pos < maxnum){
-             listir[(pos)] = pixnum;
-             }*/
 		}
 	}
 }

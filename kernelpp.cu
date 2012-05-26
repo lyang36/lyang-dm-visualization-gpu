@@ -165,13 +165,14 @@ cudaError_t run_kernel(const long MAX_Num_Paritcle, const long Nside,
 			allskymap[maplist[i].pix] += ff;
 		}
 		else{
-			int k = maplist[i].pix;
+			//int k = maplist[i].pix;
 		}
 	}
 	//std::cout << " maplist: " << init << std::endl;
 	free(maplist);
 	cudaFree(dev_maplist);
 	//std::cout << (clock() -starttime) / 1000.0 << " sec -> kernel end" << std::endl;
+    return cudaStatus;
 }
 
 
