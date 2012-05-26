@@ -16,6 +16,7 @@
 #include "skymap.h"
 #include <ctime>
 #include "kernel.h"
+#include <sys/time.h>
 
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
@@ -31,7 +32,18 @@
 
 using namespace std;;
 
+void Skymap::clock_ini(){
+    gettimeofday(&initialtime,NULL);
+}
 
+long Skymap::clock_get_msec(){
+    struct timeval endtime;
+    gettimeofday(&endtime, NULL);
+    long seconds  = endtime.tv_sec  - initialtime.tv_sec;
+    long useconds = endtime.tv_usec - initialtime.tv_usec;
+    long mtime =(long)(((seconds) * 1000 + useconds/1000.0) + 0.5);
+    return mtime;
+}
 
 Skymap::Skymap(){
     //if set _reload, then reload
@@ -182,8 +194,8 @@ bool Skymap::creat_map(){
 	//int rec = Nparts / GPU_chunk / 50;
     
     //recording time
-	clock_t time_start;
-	time_start = clock(); 
+	long time_start;
+	time_start = clock_get_msec(); 
 	
 #ifdef _DEBUG__LY__
 	for(int _ip = 0, _jp=0 ; _ip < Nparts, _jp<1; _jp ++ ){
@@ -191,10 +203,10 @@ bool Skymap::creat_map(){
 	for(int _ip = 0, _jp=0 ; _ip < Nparts; _jp ++ ){ 
 #endif
 /*****************************************************************************************************************/
-		clock_t time_loop_start = clock();
+		long time_loop_start = clock_get_msec();
 		cout << ">>>>CPU_chunk " << _jp << "--- Particles: " << CPU_chunk + _ip << "/"<< Nparts << "..." << endl;
         
-		clock_t time_step_start = clock();
+		long time_step_start = clock_get_msec();
                 
 		int nmax = 0;
         
@@ -211,11 +223,11 @@ bool Skymap::creat_map(){
 			data_input_file.read((char*)particles, sizeof(MapParticle) * tnmax);
 			_ip += tnmax;
 		}
-        std::cout <<"1) read from disk cost: " << (clock() - time_step_start) / 1000.0 << " secs. "<< std::endl;
+        std::cout <<"1) read from disk cost: " << (clock_get_msec() - time_step_start) / 1000.0 << " secs. "<< std::endl;
         
 		//step 1: pre-deal with particles
 		//get the start point of pre-process data
-        time_step_start = clock();
+        time_step_start = clock_get_msec();
 		for(int _pt =0; _pt < CPU_chunk; ){
 			if( (Nparts - _pt) >= PRE_chunk ){//read a block of data
 				nmax = PRE_chunk;
@@ -237,10 +249,10 @@ bool Skymap::creat_map(){
 			_pt += nmax;
 		}
 		//cudaFree(dev_par);
-		std::cout <<"2) pre-calculating cost: " << (clock() - time_step_start) / 1000.0 << " secs. "<< std::endl;
+		std::cout <<"2) pre-calculating cost: " << (clock_get_msec() - time_step_start) / 1000.0 << " secs. "<< std::endl;
 
 		//step 2: sort
-		time_step_start = clock();
+		time_step_start = clock_get_msec();
 		// interface to CUDA code
 		thrust::sort_by_key(dev_key.begin(), dev_key.end(), dev_val.begin());
 		thrust::copy(dev_val.begin(), dev_val.end(),host_val.begin());
@@ -256,10 +268,10 @@ bool Skymap::creat_map(){
 			sorted_particles = temp;
 		}
 
-		std::cout <<"3) sort cost: " << (clock() - time_step_start) / 1000.0 << " secs. "<< std::endl;
+		std::cout <<"3) sort cost: " << (clock_get_msec() - time_step_start) / 1000.0 << " secs. "<< std::endl;
         
 		//step3: calculate flux
-		time_step_start = clock();
+		time_step_start = clock_get_msec();
 		for(int _pt =0, _ptn = 0; _pt < CPU_chunk; _ptn++ ){
 			if( (Nparts - _pt) >= GPU_chunk ){//read a block of data
 				nmax = GPU_chunk;
@@ -288,16 +300,16 @@ bool Skymap::creat_map(){
 			}
 		}
 		std::cout << endl;
-		std::cout <<"4) flux calculating cost: " << (clock() - time_step_start) / 1000.0 << " secs. "<< std::endl;
-		std::cout << ">>>>chunk " << _jp << ": "<< (float)_ip / Nparts *100<<"% finished, costs " << (Real)(clock() - time_loop_start) / 1000.0 << 
-			" secs, escaped: " << (Real)(clock() - time_start) / 1000.0 << " secs\n" << endl;
+		std::cout <<"4) flux calculating cost: " << (clock_get_msec() - time_step_start) / 1000.0 << " secs. "<< std::endl;
+		std::cout << ">>>>chunk " << _jp << ": "<< (float)_ip / Nparts *100<<"% finished, costs " << (Real)(clock_get_msec() - time_loop_start) / 1000.0 << 
+			" secs, escaped: " << (Real)(clock_get_msec() - time_start) / 1000.0 << " secs\n" << endl;
 		_jp =_jp;
 /*****************************************************************************************************************/
 	}
 
 
 	cout << endl;
-	cout << "Time cosumed: " << (Real)(clock() - time_start) / 1000.0  << " seconds" << endl; 
+	cout << "Time cosumed: " << (Real)(clock_get_msec() - time_start) / 1000.0  << " seconds" << endl; 
 #ifdef _DEBUG__LY__
 	print_out_master(master);
 #endif

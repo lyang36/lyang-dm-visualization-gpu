@@ -3,6 +3,7 @@
 
 #include <string>
 #include "mapparticle.h"
+#include <sys/time.h>
 using namespace std;
 
 class Skymap{
@@ -12,6 +13,10 @@ private:
     bool reload;
 	int num_p; //number of particles in a paritcle block
 	MapParticle *particles;
+    long clock_get_msec();
+    void clock_ini();
+    struct timeval initialtime;
+    
 
 public:
 	long Np;
