@@ -91,8 +91,8 @@ int main(int argc, const char **argv){
     
     
 //*--------------generating fits map------------------*/
-	skymap->GPU_chunk = 16 * 1024;
-	skymap->CPU_chunk = 1024 / 48 * 1024 * 1024; //~1Gb 
+	skymap->GPU_chunk = 1024 * 64;
+	skymap->CPU_chunk = 1024 * 1024 * 8; 
 	skymap->PRE_chunk = skymap->CPU_chunk / 64; 
 	skymap->fits_filename = & fits_file;
 	skymap->master = &master;
