@@ -114,8 +114,8 @@ void in_ring_allskymap(long nside_, int iz, Real phi0, Real dphi,
         }
 	else
 	{
-		int ip_lo = floor(nr*inv_twopi*(phi0-dphi) - shift)+1;
-		int ip_hi = floor(nr*inv_twopi*(phi0+dphi) - shift);
+		int ip_lo = (int)floor(nr*inv_twopi*(phi0-dphi) - shift)+1;
+		int ip_hi = (int)floor(nr*inv_twopi*(phi0+dphi) - shift);
 		int pixnum = ip_lo+ipix1;
 		if (pixnum<ipix1) pixnum += nr;
 		for (int i=ip_lo; i<=ip_hi; ++i, ++pixnum)
